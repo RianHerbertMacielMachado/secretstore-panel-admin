@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 *.log
 admin-panel.rar
+package-lock.json
