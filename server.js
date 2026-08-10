@@ -56,7 +56,6 @@ app.get('*', (req, res) => {
 
 // Inicializar banco e servidor
 async function start() {
-    // Criar tabelas se não existirem
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway') 
@@ -65,6 +64,7 @@ async function start() {
     });
 
     try {
+        // Criar tabelas
         await pool.query(`
             CREATE TABLE IF NOT EXISTS admins (
                 id SERIAL PRIMARY KEY,
@@ -121,6 +121,7 @@ async function start() {
             );
         `);
 
+        // Criar índices
         await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_usuarios_status ON usuarios(status);
             CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
@@ -130,15 +131,58 @@ async function start() {
             CREATE INDEX IF NOT EXISTS idx_logs_created ON activity_logs(created_at DESC);
         `);
 
-        console.log('[DB] Banco inicializado com sucesso');
+        console.log('[DB] Tabelas e índices criados com sucesso');
+
+        // ═══════════════════════════════════════════════════
+        // SEED: Criar admin padrão se não existir
+        // ═══════════════════════════════════════════════════
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@secretstore.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2025';
+        const adminNome = process.env.ADMIN_NOME || 'Administrador';
+
+        const existingAdmin = await pool.query(
+            'SELECT id FROM admins WHERE email = $1',
+            [adminEmail]
+        );
+
+        if (existingAdmin.rows.length === 0) {
+            const senhaHash = await bcrypt.hash(adminPassword, 12);
+            await pool.query(
+                `INSERT INTO admins (nome, email, senha_hash, role, status) 
+                 VALUES ($1, $2, $3, 'super_admin', 'ativo')`,
+                [adminNome, adminEmail, senhaHash]
+            );
+            console.log(`[DB] ✅ Admin padrão criado: ${adminEmail}`);
+        } else {
+            console.log(`[DB] Admin já existe: ${adminEmail}`);
+        }
+
+        // Criar itens de ajuda padrão se tabela estiver vazia
+        const helpCount = await pool.query('SELECT COUNT(*) FROM help_items');
+        if (parseInt(helpCount.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO help_items (titulo, tipo, conteudo, ordem) VALUES
+                ('Como fazer login', 'faq', 'Use o email e senha fornecidos pelo administrador. No primeiro acesso com senha temporária, você será solicitado a criar uma nova senha.', 1),
+                ('Módulos disponíveis', 'faq', 'Os módulos disponíveis dependem da sua licença. Consulte o administrador para liberar módulos adicionais.', 2),
+                ('Problemas de conexão', 'faq', 'Verifique sua conexão com a internet. O programa funciona offline por até 30 dias após o último login online.', 3),
+                ('Contato', 'contato', 'Para suporte, entre em contato pelo Discord ou email do administrador.', 4)
+            `);
+            console.log('[DB] ✅ Itens de ajuda padrão criados');
+        }
+
         await pool.end();
+        console.log('[DB] ✅ Banco inicializado com sucesso');
+
     } catch (error) {
-        console.error('[DB] Erro ao inicializar:', error.message);
+        console.error('[DB] ❌ Erro ao inicializar banco:', error.message || error);
+        console.error('[DB] Stack:', error.stack);
+        // Não fechar o app - apenas logar o erro
     }
 
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`[Server] Admin Panel rodando na porta ${PORT}`);
     });
 }
+
 
 start();
