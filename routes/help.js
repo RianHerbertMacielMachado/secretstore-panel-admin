@@ -5,36 +5,8 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
-// Listar logs
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
-    const { tipo, limit } = req.query;
-
-    try {
-        let query = 'SELECT id, cliente_id, email, acao AS action, detalhes AS details, device_id, ip_address, criado_em AS created_at FROM logs_acesso';
-        let params = [];
-
-        if (tipo && tipo !== 'all') {
-            query += ' WHERE acao = $1';
-            params.push(tipo);
-        }
-
-        query += ' ORDER BY criado_em DESC LIMIT $' + (params.length + 1);
-        params.push(parseInt(limit) || 100);
-
-        const result = await pool.query(query, params);
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Erro ao listar logs:', error);
-        res.status(500).json({ error: 'Erro ao listar logs' });
-    }
-});
-
-// ════════════════════════════════════════════════════════════════
-// HELP — usa tabela "help_info" (mesma que a API/exe lê)
-// ════════════════════════════════════════════════════════════════
-
 // Listar itens de ajuda
-router.get('/help', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(
             'SELECT id, titulo, conteudo, ordem, ativo, criado_em FROM help_info ORDER BY ordem ASC'
@@ -46,8 +18,8 @@ router.get('/help', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// Criar item de ajuda
-router.post('/help', authenticateToken, requireAdmin, async (req, res) => {
+// Criar item
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
     const { titulo, tipo, conteudo, ordem } = req.body;
 
     if (!titulo || !conteudo) {
@@ -66,8 +38,8 @@ router.post('/help', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// Atualizar item de ajuda
-router.put('/help/:id', authenticateToken, requireAdmin, async (req, res) => {
+// Atualizar item
+router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { titulo, tipo, conteudo, ordem } = req.body;
 
@@ -83,13 +55,13 @@ router.put('/help/:id', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// Deletar item de ajuda
-router.delete('/help/:id', authenticateToken, requireAdmin, async (req, res) => {
+// Deletar item
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
 
     try {
         await pool.query('DELETE FROM help_info WHERE id = $1', [id]);
-        res.json({ message: 'Item excluído' });
+        res.json({ message: 'Item removido' });
     } catch (error) {
         console.error('Erro ao deletar help:', error);
         res.status(500).json({ error: 'Erro ao remover item' });

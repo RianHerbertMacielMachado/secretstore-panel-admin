@@ -77,7 +77,10 @@ app.get('/api/emergency/status', async (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/clients', require('./routes/clients'));
+app.use('/api/logs/help', require('./routes/help'));
 app.use('/api/logs', require('./routes/logs'));
+// app.use('/api/help', require('./routes/help'));
+
 
 // ─── Static Files (SPA) ──────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
