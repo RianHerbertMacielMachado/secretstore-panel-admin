@@ -75,7 +75,7 @@ router.post('/client/login', async (req, res) => {
 
     try {
         const result = await pool.query(
-            'SELECT * FROM usuarios WHERE email = $1',
+            'SELECT * FROM clientes WHERE email = $1',
             [email]
         );
 
@@ -107,14 +107,14 @@ router.post('/client/login', async (req, res) => {
         // Registrar dispositivo se ainda não tem
         if (!user.device_registrado && device_id) {
             await pool.query(
-                'UPDATE usuarios SET device_id = $1, device_nome = $2, device_registrado = TRUE WHERE id = $3',
+                'UPDATE clientes SET device_id = $1, device_nome = $2, device_registrado = TRUE WHERE id = $3',
                 [device_id, device_nome || 'Desconhecido', user.id]
             );
         }
 
         // Atualizar último acesso
         await pool.query(
-            'UPDATE usuarios SET data_ultimo_acesso = NOW() WHERE id = $1',
+            'UPDATE clientes SET data_ultimo_acesso = NOW() WHERE id = $1',
             [user.id]
         );
 
@@ -157,7 +157,7 @@ router.post('/client/request-reset', async (req, res) => {
 
     try {
         const result = await pool.query(
-            'SELECT id, nome FROM usuarios WHERE email = $1',
+            'SELECT id, nome FROM clientes WHERE email = $1',
             [email]
         );
 
@@ -167,7 +167,7 @@ router.post('/client/request-reset', async (req, res) => {
         }
 
         await pool.query(
-            'UPDATE usuarios SET reset_solicitado = TRUE, reset_data_solicitacao = NOW() WHERE email = $1',
+            'UPDATE clientes SET reset_solicitado = TRUE, reset_data_solicitacao = NOW() WHERE email = $1',
             [email]
         );
 
@@ -196,7 +196,7 @@ router.post('/client/set-password', authenticateToken, async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 12);
 
         await pool.query(
-            `UPDATE usuarios SET 
+            `UPDATE clientes SET 
                 senha_hash = $1, 
                 is_senha_temporaria = FALSE, 
                 senha_temporaria = NULL, 
