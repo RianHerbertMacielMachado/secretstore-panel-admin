@@ -1,266 +1,214 @@
 require('dotenv').config();
-
 const express = require('express');
-const compression = require('compression');
-const helmet = require('helmet');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 
-const authRoutes = require('./routes/auth');
-const adminRoutes = require('./routes/admin');
-const clientRoutes = require('./routes/clients');
-const logRoutes = require('./routes/logs');
-
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-// Segurança
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-            scriptSrcAttr: ["'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-            connectSrc: ["'self'"],
-            imgSrc: ["'self'", "data:", "https:"],
-        }
-    },
-    crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: false
-}));
-
+// ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(compression());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ═══════════════════════════════════════════════════
-// ROTAS DE EMERGÊNCIA (acesso sem login)
-// ═══════════════════════════════════════════════════
+// ─── Database ─────────────────────────────────────────────────────────────────
+const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.DATABASE_URL?.includes('railway');
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isRailway ? { rejectUnauthorized: false } : false
+});
+
+// ─── Emergency Routes ─────────────────────────────────────────────────────────
 app.get('/api/emergency/unlock', async (req, res) => {
-    const EMERGENCY_KEY = process.env.EMERGENCY_KEY || 'secretstore-emergency-2025';
-    if (req.query.key !== EMERGENCY_KEY) {
-        return res.status(404).json({ error: 'Not found' });
+    if (!process.env.EMERGENCY_KEY || req.query.key !== process.env.EMERGENCY_KEY) {
+        return res.status(403).json({ error: 'Chave inválida' });
     }
-
-    const emergencyPool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
-    });
-
     try {
-        await emergencyPool.query("UPDATE admins SET status = 'ativo'");
-        const admins = await emergencyPool.query('SELECT id, email, status FROM admins');
-        await emergencyPool.end();
-        res.json({ success: true, message: 'Todos os admins desbloqueados', admins: admins.rows });
-    } catch (error) {
-        await emergencyPool.end();
-        res.status(500).json({ error: error.message });
+        await pool.query("UPDATE admins SET status = 'ativo'");
+        // Também desbloqueia clientes se necessário
+        await pool.query("UPDATE clientes SET status = 'ativo'");
+        res.json({ success: true, message: 'Todos os admins e clientes desbloqueados.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
 app.get('/api/emergency/reset-password', async (req, res) => {
-    const EMERGENCY_KEY = process.env.EMERGENCY_KEY || 'secretstore-emergency-2025';
-    if (req.query.key !== EMERGENCY_KEY) {
-        return res.status(404).json({ error: 'Not found' });
+    if (!process.env.EMERGENCY_KEY || req.query.key !== process.env.EMERGENCY_KEY) {
+        return res.status(403).json({ error: 'Chave inválida' });
     }
-
-    const { email, newpass } = req.query;
-    if (!email || !newpass) {
-        return res.json({ uso: '/api/emergency/reset-password?key=CHAVE&email=EMAIL&newpass=NOVASENHA' });
-    }
-
-    const emergencyPool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
-    });
-
     try {
+        const { email, newpass } = req.query;
+        if (!email || !newpass) return res.status(400).json({ error: 'email e newpass são obrigatórios' });
         const hash = await bcrypt.hash(newpass, 12);
-        const result = await emergencyPool.query(
-            "UPDATE admins SET senha_hash = $1, status = 'ativo' WHERE email = $2 RETURNING id, email",
-            [hash, email]
-        );
-        await emergencyPool.end();
-
-        if (result.rowCount === 0) {
-            return res.json({ error: 'Admin não encontrado com esse email' });
-        }
-        res.json({ success: true, message: `Senha do ${email} resetada com sucesso. Nova senha: ${newpass}` });
-    } catch (error) {
-        await emergencyPool.end();
-        res.status(500).json({ error: error.message });
+        // Tenta atualizar em admins
+        const r1 = await pool.query("UPDATE admins SET senha_hash = $1, status = 'ativo' WHERE email = $2", [hash, email]);
+        // Tenta atualizar em clientes
+        const r2 = await pool.query("UPDATE clientes SET senha_hash = $1, status = 'ativo', is_senha_temporaria = false WHERE email = $2", [hash, email]);
+        res.json({
+            success: true,
+            message: `Senha resetada. Admins atualizados: ${r1.rowCount}, Clientes atualizados: ${r2.rowCount}`
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
 app.get('/api/emergency/status', async (req, res) => {
-    const EMERGENCY_KEY = process.env.EMERGENCY_KEY || 'secretstore-emergency-2025';
-    if (req.query.key !== EMERGENCY_KEY) {
-        return res.status(404).json({ error: 'Not found' });
+    if (!process.env.EMERGENCY_KEY || req.query.key !== process.env.EMERGENCY_KEY) {
+        return res.status(403).json({ error: 'Chave inválida' });
     }
-
-    const emergencyPool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
-    });
-
     try {
-        const admins = await emergencyPool.query('SELECT id, nome, email, status, role, ultimo_acesso, created_at FROM admins');
-        await emergencyPool.end();
-        res.json({ success: true, admins: admins.rows });
-    } catch (error) {
-        await emergencyPool.end();
-        res.status(500).json({ error: error.message });
+        const admins = await pool.query("SELECT id, nome, email, status, criado_em FROM admins");
+        const clientes = await pool.query("SELECT id, nome, email, status, modulos_permitidos, device_id, ultimo_login, criado_em FROM clientes");
+        res.json({ admins: admins.rows, clientes: clientes.rows });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
-// Rotas API
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/logs', logRoutes);
+// ─── API Routes ───────────────────────────────────────────────────────────────
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/clients', require('./routes/clients'));
+app.use('/api/logs', require('./routes/logs'));
 
-// Arquivos estáticos
-app.use(express.static(path.join(__dirname, 'public'), {
-    maxAge: '1h',
-    etag: true
-}));
-
-// SPA fallback
+// ─── Static Files (SPA) ──────────────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
 });
 
-// Inicializar banco e servidor
+// ─── Start Server ─────────────────────────────────────────────────────────────
 async function start() {
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway')
-            ? { rejectUnauthorized: false }
-            : false
-    });
-
     try {
-        // Criar tabelas
+        console.log('[DB] Conectando ao PostgreSQL...');
+
+        // ══════════════════════════════════════════════════════════════
+        // TABELAS — usa "clientes" (mesma tabela que a API do .exe)
+        // ══════════════════════════════════════════════════════════════
         await pool.query(`
             CREATE TABLE IF NOT EXISTS admins (
                 id SERIAL PRIMARY KEY,
-                nome VARCHAR(255) NOT NULL,
+                nome VARCHAR(100) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 senha_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(50) DEFAULT 'admin',
-                status VARCHAR(50) DEFAULT 'ativo',
-                permissoes TEXT[] DEFAULT '{"gerenciar_usuarios","aprovar_resets","gerenciar_ajuda","ver_logs"}',
-                ultimo_acesso TIMESTAMP,
-                created_at TIMESTAMP DEFAULT NOW()
+                role VARCHAR(20) DEFAULT 'super_admin',
+                status VARCHAR(20) DEFAULT 'ativo',
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE IF NOT EXISTS usuarios (
+            CREATE TABLE IF NOT EXISTS clientes (
                 id SERIAL PRIMARY KEY,
-                nome VARCHAR(255) NOT NULL,
+                nome VARCHAR(100) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 senha_hash VARCHAR(255) NOT NULL,
-                status VARCHAR(50) DEFAULT 'ativo',
-                modulos_permitidos TEXT[] DEFAULT '{}',
-                device_id VARCHAR(255),
-                device_nome VARCHAR(255),
-                device_registrado BOOLEAN DEFAULT FALSE,
-                reset_solicitado BOOLEAN DEFAULT FALSE,
-                reset_data_solicitacao TIMESTAMP,
-                reset_aprovado BOOLEAN DEFAULT FALSE,
-                senha_temporaria VARCHAR(255),
+                status VARCHAR(20) DEFAULT 'ativo',
+                modulos_permitidos TEXT[] DEFAULT ARRAY['mapas', 'veiculos', 'roupas', 'peds', 'weapons'],
                 is_senha_temporaria BOOLEAN DEFAULT FALSE,
-                max_dispositivos INTEGER DEFAULT 1,
-                data_ultimo_acesso TIMESTAMP,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
+                device_id VARCHAR(255),
+                ultimo_login TIMESTAMP,
+                reset_solicitado BOOLEAN DEFAULT FALSE,
+                reset_aprovado BOOLEAN DEFAULT FALSE,
+                notas TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE IF NOT EXISTS activity_logs (
+            CREATE TABLE IF NOT EXISTS sessoes (
                 id SERIAL PRIMARY KEY,
-                tipo VARCHAR(50) NOT NULL,
-                user_id INTEGER,
-                user_email VARCHAR(255),
-                action VARCHAR(100) NOT NULL,
-                details TEXT,
-                ip VARCHAR(50),
-                created_at TIMESTAMP DEFAULT NOW()
+                cliente_id INTEGER REFERENCES clientes(id) ON DELETE CASCADE,
+                token_hash VARCHAR(255) NOT NULL,
+                device_id VARCHAR(255),
+                ip_address VARCHAR(50),
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expira_em TIMESTAMP NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS help_items (
+            CREATE TABLE IF NOT EXISTS logs_acesso (
                 id SERIAL PRIMARY KEY,
-                titulo VARCHAR(255) NOT NULL,
-                tipo VARCHAR(50) DEFAULT 'faq',
+                cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+                email VARCHAR(255),
+                acao VARCHAR(50) NOT NULL,
+                detalhes TEXT,
+                ip_address VARCHAR(50),
+                device_id VARCHAR(255),
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS help_info (
+                id SERIAL PRIMARY KEY,
+                titulo VARCHAR(200) NOT NULL,
                 conteudo TEXT NOT NULL,
                 ordem INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
+                ativo BOOLEAN DEFAULT TRUE,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE INDEX IF NOT EXISTS idx_clientes_email ON clientes(email);
+            CREATE INDEX IF NOT EXISTS idx_clientes_status ON clientes(status);
+            CREATE INDEX IF NOT EXISTS idx_sessoes_cliente_id ON sessoes(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_logs_cliente_id ON logs_acesso(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_logs_criado_em ON logs_acesso(criado_em);
         `);
 
-        // Criar índices
-        await pool.query(`
-            CREATE INDEX IF NOT EXISTS idx_usuarios_status ON usuarios(status);
-            CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
-            CREATE INDEX IF NOT EXISTS idx_usuarios_reset ON usuarios(reset_solicitado, reset_aprovado);
-            CREATE INDEX IF NOT EXISTS idx_logs_tipo ON activity_logs(tipo);
-            CREATE INDEX IF NOT EXISTS idx_logs_action ON activity_logs(action);
-            CREATE INDEX IF NOT EXISTS idx_logs_created ON activity_logs(created_at DESC);
-        `);
+        console.log('[DB] ✅ Tabelas e índices criados com sucesso');
 
-        console.log('[DB] Tabelas e índices criados com sucesso');
-
-        // ═══════════════════════════════════════════════════
-        // SEED: Criar admin padrão se não existir
-        // ═══════════════════════════════════════════════════
+        // ─── Seed Admin ──────────────────────────────────────────────
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@secretstore.com';
         const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2025';
         const adminNome = process.env.ADMIN_NOME || 'Administrador';
 
-        const existingAdmin = await pool.query(
-            'SELECT id FROM admins WHERE email = $1',
-            [adminEmail]
-        );
-
-        if (existingAdmin.rows.length === 0) {
-            const senhaHash = await bcrypt.hash(adminPassword, 12);
+        const adminExists = await pool.query('SELECT id FROM admins WHERE email = $1', [adminEmail]);
+        if (adminExists.rows.length === 0) {
+            const hash = await bcrypt.hash(adminPassword, 12);
             await pool.query(
-                `INSERT INTO admins (nome, email, senha_hash, role, status) 
-                 VALUES ($1, $2, $3, 'super_admin', 'ativo')`,
-                [adminNome, adminEmail, senhaHash]
+                'INSERT INTO admins (nome, email, senha_hash, role, status) VALUES ($1, $2, $3, $4, $5)',
+                [adminNome, adminEmail, hash, 'super_admin', 'ativo']
             );
             console.log(`[DB] ✅ Admin padrão criado: ${adminEmail}`);
         } else {
             console.log(`[DB] Admin já existe: ${adminEmail}`);
         }
 
-        // Criar itens de ajuda padrão se tabela estiver vazia
-        const helpCount = await pool.query('SELECT COUNT(*) FROM help_items');
+        // ─── Seed Help Info ──────────────────────────────────────────
+        const helpCount = await pool.query('SELECT COUNT(*) FROM help_info');
         if (parseInt(helpCount.rows[0].count) === 0) {
             await pool.query(`
-                INSERT INTO help_items (titulo, tipo, conteudo, ordem) VALUES
-                ('Como fazer login', 'faq', 'Use o email e senha fornecidos pelo administrador. No primeiro acesso com senha temporária, você será solicitado a criar uma nova senha.', 1),
-                ('Módulos disponíveis', 'faq', 'Os módulos disponíveis dependem da sua licença: Mapas, Carros, Roupas, Peds e Weapons. Consulte o administrador para liberar módulos adicionais.', 2),
-                ('Problemas de conexão', 'faq', 'Verifique sua conexão com a internet. O programa funciona offline por até 30 dias após o último login online.', 3),
-                ('Contato', 'contato', 'Para suporte, entre em contato pelo Discord ou email do administrador.', 4)
+                INSERT INTO help_info (titulo, conteudo, ordem) VALUES
+                ('Como fazer login', 'Use o email e senha fornecidos pelo administrador. Na primeira vez, você será solicitado a alterar sua senha.', 1),
+                ('Módulos', 'Você terá acesso apenas aos módulos habilitados pelo administrador: Mapas, Carros, Roupas, Peds e Weapons.', 2),
+                ('Problemas de conexão', 'Verifique sua internet. Se o problema persistir, entre em contato com o suporte.', 3),
+                ('Contato', 'Para suporte, entre em contato com a Secret Store através do painel administrativo.', 4)
             `);
             console.log('[DB] ✅ Itens de ajuda padrão criados');
         }
 
-        await pool.end();
+        // ─── Remover tabela "usuarios" se existir (legado) ───────────
+        await pool.query('DROP TABLE IF EXISTS usuarios CASCADE');
+        console.log('[DB] ✅ Tabela legada "usuarios" removida (se existia)');
+
         console.log('[DB] ✅ Banco inicializado com sucesso');
 
-    } catch (error) {
-        console.error('[DB] ❌ Erro ao inicializar banco:', error.message || error);
-        console.error('[DB] Stack:', error.stack);
-    }
+        // ─── Start Express ───────────────────────────────────────────
+        app.listen(PORT, () => {
+            console.log(`[Server] ✅ Admin Panel rodando na porta ${PORT}`);
+        });
 
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(`[Server] Admin Panel rodando na porta ${PORT}`);
-    });
+    } catch (error) {
+        console.error('[DB] ❌ Erro ao inicializar:', error.message);
+        console.error(error);
+        process.exit(1);
+    }
 }
 
 start();
