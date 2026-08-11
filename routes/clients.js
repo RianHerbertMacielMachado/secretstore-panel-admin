@@ -10,7 +10,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejec
 router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT id, nome, email, status, modulos_permitidos, device_id, device_nome, device_registrado, reset_solicitado, reset_aprovado, reset_data_solicitacao, data_ultimo_acesso, created_at FROM usuarios ORDER BY created_at DESC'
+            'SELECT id, nome, email, status, modulos_permitidos, device_id, device_nome, device_registrado, reset_solicitado, reset_aprovado, reset_data_solicitacao, data_ultimo_acesso, created_at FROM clientes ORDER BY created_at DESC'
         );
         res.json(result.rows);
     } catch (error) {
@@ -33,7 +33,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 
     try {
         // Verificar se email já existe
-        const existing = await pool.query('SELECT id FROM usuarios WHERE email = $1', [email]);
+        const existing = await pool.query('SELECT id FROM clientes WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
             return res.status(409).json({ error: 'Email já cadastrado' });
         }
@@ -41,7 +41,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 12);
 
         const result = await pool.query(
-            `INSERT INTO usuarios (nome, email, senha_hash, status, modulos_permitidos) 
+            `INSERT INTO clientes (nome, email, senha_hash, status, modulos_permitidos) 
              VALUES ($1, $2, $3, $4, $5) RETURNING id`,
             [nome, email, hashedPassword, status || 'ativo', modulos_permitidos || []]
         );
@@ -65,13 +65,13 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { nome, email, password, status, modulos_permitidos } = req.body;
 
     try {
-        let query = `UPDATE usuarios SET nome = $1, email = $2, status = $3, modulos_permitidos = $4, updated_at = NOW() WHERE id = $5`;
+        let query = `UPDATE clientes SET nome = $1, email = $2, status = $3, modulos_permitidos = $4, updated_at = NOW() WHERE id = $5`;
         let params = [nome, email, status, modulos_permitidos || [], id];
 
         // Se senha foi fornecida, atualizar também
         if (password && password.length >= 6) {
             const hashedPassword = await bcrypt.hash(password, 12);
-            query = `UPDATE usuarios SET nome = $1, email = $2, status = $3, modulos_permitidos = $4, senha_hash = $5, updated_at = NOW() WHERE id = $6`;
+            query = `UPDATE clientes SET nome = $1, email = $2, status = $3, modulos_permitidos = $4, senha_hash = $5, updated_at = NOW() WHERE id = $6`;
             params = [nome, email, status, modulos_permitidos || [], hashedPassword, id];
         }
 
@@ -97,11 +97,11 @@ router.patch('/:id/status', authenticateToken, requireAdmin, async (req, res) =>
 
     try {
         await pool.query(
-            'UPDATE usuarios SET status = $1, updated_at = NOW() WHERE id = $2',
+            'UPDATE clientes SET status = $1, updated_at = NOW() WHERE id = $2',
             [status, id]
         );
 
-        const user = await pool.query('SELECT email FROM usuarios WHERE id = $1', [id]);
+        const user = await pool.query('SELECT email FROM clientes WHERE id = $1', [id]);
 
         const action = status === 'ativo' ? 'activate_client' : 'block_client';
         await pool.query(
@@ -122,11 +122,11 @@ router.patch('/:id/release-device', authenticateToken, requireAdmin, async (req,
 
     try {
         await pool.query(
-            'UPDATE usuarios SET device_id = NULL, device_nome = NULL, device_registrado = FALSE, updated_at = NOW() WHERE id = $1',
+            'UPDATE clientes SET device_id = NULL, device_nome = NULL, device_registrado = FALSE, updated_at = NOW() WHERE id = $1',
             [id]
         );
 
-        const user = await pool.query('SELECT email FROM usuarios WHERE id = $1', [id]);
+        const user = await pool.query('SELECT email FROM clientes WHERE id = $1', [id]);
 
         await pool.query(
             'INSERT INTO activity_logs (tipo, user_id, user_email, action, details) VALUES ($1, $2, $3, $4, $5)',
@@ -152,11 +152,11 @@ router.patch('/:id/change-password', authenticateToken, requireAdmin, async (req
     try {
         const hashedPassword = await bcrypt.hash(newPassword, 12);
         await pool.query(
-            'UPDATE usuarios SET senha_hash = $1, updated_at = NOW() WHERE id = $2',
+            'UPDATE clientes SET senha_hash = $1, updated_at = NOW() WHERE id = $2',
             [hashedPassword, id]
         );
 
-        const user = await pool.query('SELECT email FROM usuarios WHERE id = $1', [id]);
+        const user = await pool.query('SELECT email FROM clientes WHERE id = $1', [id]);
 
         await pool.query(
             'INSERT INTO activity_logs (tipo, user_id, user_email, action, details) VALUES ($1, $2, $3, $4, $5)',
