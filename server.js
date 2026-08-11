@@ -37,6 +37,86 @@ app.use(compression());
 app.use(cors());
 app.use(express.json());
 
+// ═══════════════════════════════════════════════════
+// ROTAS DE EMERGÊNCIA (acesso sem login)
+// ═══════════════════════════════════════════════════
+app.get('/api/emergency/unlock', async (req, res) => {
+    const EMERGENCY_KEY = process.env.EMERGENCY_KEY || 'secretstore-emergency-2025';
+    if (req.query.key !== EMERGENCY_KEY) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+
+    const emergencyPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
+    });
+
+    try {
+        await emergencyPool.query("UPDATE admins SET status = 'ativo'");
+        const admins = await emergencyPool.query('SELECT id, email, status FROM admins');
+        await emergencyPool.end();
+        res.json({ success: true, message: 'Todos os admins desbloqueados', admins: admins.rows });
+    } catch (error) {
+        await emergencyPool.end();
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/emergency/reset-password', async (req, res) => {
+    const EMERGENCY_KEY = process.env.EMERGENCY_KEY || 'secretstore-emergency-2025';
+    if (req.query.key !== EMERGENCY_KEY) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+
+    const { email, newpass } = req.query;
+    if (!email || !newpass) {
+        return res.json({ uso: '/api/emergency/reset-password?key=CHAVE&email=EMAIL&newpass=NOVASENHA' });
+    }
+
+    const emergencyPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
+    });
+
+    try {
+        const hash = await bcrypt.hash(newpass, 12);
+        const result = await emergencyPool.query(
+            "UPDATE admins SET senha_hash = $1, status = 'ativo' WHERE email = $2 RETURNING id, email",
+            [hash, email]
+        );
+        await emergencyPool.end();
+
+        if (result.rowCount === 0) {
+            return res.json({ error: 'Admin não encontrado com esse email' });
+        }
+        res.json({ success: true, message: `Senha do ${email} resetada com sucesso. Nova senha: ${newpass}` });
+    } catch (error) {
+        await emergencyPool.end();
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/emergency/status', async (req, res) => {
+    const EMERGENCY_KEY = process.env.EMERGENCY_KEY || 'secretstore-emergency-2025';
+    if (req.query.key !== EMERGENCY_KEY) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+
+    const emergencyPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
+    });
+
+    try {
+        const admins = await emergencyPool.query('SELECT id, nome, email, status, role, ultimo_acesso, created_at FROM admins');
+        await emergencyPool.end();
+        res.json({ success: true, admins: admins.rows });
+    } catch (error) {
+        await emergencyPool.end();
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Rotas API
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -58,8 +138,8 @@ app.get('*', (req, res) => {
 async function start() {
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway') 
-            ? { rejectUnauthorized: false } 
+        ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway')
+            ? { rejectUnauthorized: false }
             : false
     });
 
@@ -163,7 +243,7 @@ async function start() {
             await pool.query(`
                 INSERT INTO help_items (titulo, tipo, conteudo, ordem) VALUES
                 ('Como fazer login', 'faq', 'Use o email e senha fornecidos pelo administrador. No primeiro acesso com senha temporária, você será solicitado a criar uma nova senha.', 1),
-                ('Módulos disponíveis', 'faq', 'Os módulos disponíveis dependem da sua licença. Consulte o administrador para liberar módulos adicionais.', 2),
+                ('Módulos disponíveis', 'faq', 'Os módulos disponíveis dependem da sua licença: Mapas, Carros, Roupas, Peds e Weapons. Consulte o administrador para liberar módulos adicionais.', 2),
                 ('Problemas de conexão', 'faq', 'Verifique sua conexão com a internet. O programa funciona offline por até 30 dias após o último login online.', 3),
                 ('Contato', 'contato', 'Para suporte, entre em contato pelo Discord ou email do administrador.', 4)
             `);
@@ -176,13 +256,11 @@ async function start() {
     } catch (error) {
         console.error('[DB] ❌ Erro ao inicializar banco:', error.message || error);
         console.error('[DB] Stack:', error.stack);
-        // Não fechar o app - apenas logar o erro
     }
 
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`[Server] Admin Panel rodando na porta ${PORT}`);
     });
 }
-
 
 start();
