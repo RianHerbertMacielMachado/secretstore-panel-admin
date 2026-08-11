@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecretStore - Guia & Manual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 40px;
+            font-size: 0.95rem;
+        }
+
+        .section {
+            background: #12122a;
+            border: 1px solid #1e1e3a;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #1e1e3a;
+        }
+
+        .section h3 {
+            color: #a78bfa;
+            font-size: 1.1rem;
+            margin: 20px 0 10px 0;
+        }
+
+        p {
+            margin-bottom: 12px;
+            color: #ccc;
+        }
+
+        code {
+            background: #1a1a3e;
+            color: #a78bfa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: #0d0d20;
+            border: 1px solid #1e1e3a;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #e0e0e0;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border: 1px solid #1e1e3a;
+        }
+
+        th {
+            background: #1a1a3e;
+            color: #667eea;
+        }
+
+        td {
+            color: #ccc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-api { background: #1e3a5f; color: #60a5fa; }
+        .badge-panel { background: #1e3a2a; color: #4ade80; }
+        .badge-exe { background: #3a1e3a; color: #c084fc; }
+        .badge-db { background: #3a2a1e; color: #fb923c; }
+
+        .warning {
+            background: #2a1a0a;
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+
+        .warning strong {
+            color: #f59e0b;
+        }
+
+        .success {
+            background: #0a2a1a;
+            border-left: 4px solid #10b981;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+
+        .success strong {
+            color: #10b981;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #1e1e3a;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #2a2a4a;
+        }
+
+        .toc {
+            background: #0d0d20;
+            border: 1px solid #1e1e3a;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+        }
+
+        .toc h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .toc ol {
+            padding-left: 20px;
+        }
+
+        .toc li {
+            margin-bottom: 6px;
+        }
+
+        .toc a {
+            color: #a78bfa;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .architecture-diagram {
+            text-align: center;
+            padding: 20px;
+            margin: 15px 0;
+            background: #0d0d20;
+            border-radius: 8px;
+            border: 1px solid #1e1e3a;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← Voltar ao Painel</a>
+
+        <h1>SecretStore - Guia Completo</h1>
+        <p class="subtitle">Manual de implantação, configuração e manutenção do sistema</p>
+
+        <!-- Índice -->
+        <div class="toc">
+            <h3>Índice</h3>
+            <ol>
+                <li><a href="#arquitetura">Arquitetura do Sistema</a></li>
+                <li><a href="#banco">Banco de Dados (PostgreSQL)</a></li>
+                <li><a href="#variaveis">Variáveis de Ambiente</a></li>
+                <li><a href="#deploy">Deploy no Railway</a></li>
+                <li><a href="#painel">Painel Admin - Funcionalidades</a></li>
+                <li><a href="#exe">Programa (.exe) - Configuração</a></li>
+                <li><a href="#modulos">Módulos Disponíveis</a></li>
+                <li><a href="#emergencia">Rotas de Emergência</a></li>
+                <li><a href="#troubleshooting">Solução de Problemas</a></li>
+                <li><a href="#checklist">Checklist de Deploy</a></li>
+            </ol>
+        </div>
+
+        <!-- 1. Arquitetura -->
+        <div class="section" id="arquitetura">
+            <h2>1. Arquitetura do Sistema</h2>
+            <p>O SecretStore é composto por três componentes que compartilham o mesmo banco de dados PostgreSQL:</p>
+
+            <div class="architecture-diagram">
+┌─────────────────┐      ┌─────────────────────────┐      ┌──────────────┐
+│   Programa      │      │     Panel Admin          │      │  PostgreSQL  │
+│   (.exe)        │─────▶│  (Node.js/Express)       │─────▶│  (Railway)   │
+│   Electron      │      │  Railway Service         │      │              │
+└─────────────────┘      └─────────────────────────┘      └──────────────┘
+        │                           │                             ▲
+        │                           │                             │
+        └───────────────────────────┴─────────────────────────────┘
+                        Todas as rotas /api/*
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <th>Componente</th>
+                        <th>Tecnologia</th>
+                        <th>Função</th>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-panel">Panel Admin</span></td>
+                        <td>Node.js + Express + HTML/CSS/JS</td>
+                        <td>Gerenciar clientes, módulos, logs, resets</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-exe">Programa .exe</span></td>
+                        <td>Electron + Python (PyInstaller)</td>
+                        <td>Interface do cliente - acessa módulos permitidos</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-db">Banco de Dados</span></td>
+                        <td>PostgreSQL (Railway)</td>
+                        <td>Armazenar admins, clientes, logs, sessões</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. Banco de Dados -->
+        <div class="section" id="banco">
+            <h2>2. Banco de Dados (PostgreSQL)</h2>
+            <p>O sistema utiliza <strong>uma única instância PostgreSQL</strong> no Railway com as seguintes tabelas:</p>
+
+            <h3>Tabela: <code>admins</code></h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Coluna</th><th>Tipo</th><th>Descrição</th></tr>
+                    <tr><td>id</td><td>SERIAL PK</td><td>ID único</td></tr>
+                    <tr><td>nome</td><td>VARCHAR(100)</td><td>Nome do administrador</td></tr>
+                    <tr><td>email</td><td>VARCHAR(255) UNIQUE</td><td>Email de login</td></tr>
+                    <tr><td>senha_hash</td><td>VARCHAR(255)</td><td>Senha criptografada (bcrypt)</td></tr>
+                    <tr><td>role</td><td>VARCHAR(20)</td><td>Papel (super_admin)</td></tr>
+                    <tr><td>status</td><td>VARCHAR(20)</td><td>ativo / inativo</td></tr>
+                    <tr><td>criado_em</td><td>TIMESTAMP</td><td>Data de criação</td></tr>
+                    <tr><td>atualizado_em</td><td>TIMESTAMP</td><td>Última atualização</td></tr>
+                </table>
+            </div>
+
+            <h3>Tabela: <code>clientes</code></h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Coluna</th><th>Tipo</th><th>Descrição</th></tr>
+                    <tr><td>id</td><td>SERIAL PK</td><td>ID único</td></tr>
+                    <tr><td>nome</td><td>VARCHAR(100)</td><td>Nome do cliente</td></tr>
+                    <tr><td>email</td><td>VARCHAR(255) UNIQUE</td><td>Email de login</td></tr>
+                    <tr><td>senha_hash</td><td>VARCHAR(255)</td><td>Senha criptografada</td></tr>
+                    <tr><td>status</td><td>VARCHAR(20)</td><td>ativo / inativo / bloqueado</td></tr>
+                    <tr><td>modulos_permitidos</td><td>TEXT[]</td><td>Array de módulos: mapas, veiculos, roupas, peds, weapons</td></tr>
+                    <tr><td>is_senha_temporaria</td><td>BOOLEAN</td><td>Se a senha precisa ser alterada</td></tr>
+                    <tr><td>device_id</td><td>VARCHAR(255)</td><td>ID do dispositivo vinculado</td></tr>
+                    <tr><td>device_nome</td><td>VARCHAR(255)</td><td>Nome do dispositivo</td></tr>
+                    <tr><td>device_registrado</td><td>BOOLEAN</td><td>Se há dispositivo vinculado</td></tr>
+                    <tr><td>ultimo_login</td><td>TIMESTAMP</td><td>Data do último login</td></tr>
+                    <tr><td>data_ultimo_acesso</td><td>TIMESTAMP</td><td>Último acesso ao sistema</td></tr>
+                    <tr><td>reset_solicitado</td><td>BOOLEAN</td><td>Se há reset de senha pendente</td></tr>
+                    <tr><td>reset_aprovado</td><td>BOOLEAN</td><td>Se o reset foi aprovado pelo admin</td></tr>
+                    <tr><td>reset_data_solicitacao</td><td>TIMESTAMP</td><td>Data da solicitação de reset</td></tr>
+                    <tr><td>notas</td><td>TEXT</td><td>Observações do admin</td></tr>
+                    <tr><td>criado_em</td><td>TIMESTAMP</td><td>Data de criação</td></tr>
+                    <tr><td>atualizado_em</td><td>TIMESTAMP</td><td>Última atualização</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Alias de compatibilidade</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Alias de compatibilidade</td></tr>
+                </table>
+            </div>
+
+            <h3>Tabela: <code>sessoes</code></h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Coluna</th><th>Tipo</th><th>Descrição</th></tr>
+                    <tr><td>id</td><td>SERIAL PK</td><td>ID único</td></tr>
+                    <tr><td>cliente_id</td><td>INTEGER FK</td><td>Referência ao cliente</td></tr>
+                    <tr><td>token_hash</td><td>VARCHAR(255)</td><td>Hash do token JWT</td></tr>
+                    <tr><td>device_id</td><td>VARCHAR(255)</td><td>Dispositivo da sessão</td></tr>
+                    <tr><td>ip_address</td><td>VARCHAR(50)</td><td>IP do acesso</td></tr>
+                    <tr><td>criado_em</td><td>TIMESTAMP</td><td>Início da sessão</td></tr>
+                    <tr><td>expira_em</td><td>TIMESTAMP</td><td>Expiração da sessão</td></tr>
+                </table>
+            </div>
+
+            <h3>Tabela: <code>logs_acesso</code></h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Coluna</th><th>Tipo</th><th>Descrição</th></tr>
+                    <tr><td>id</td><td>SERIAL PK</td><td>ID único</td></tr>
+                    <tr><td>cliente_id</td><td>INTEGER FK</td><td>Referência ao cliente</td></tr>
+                    <tr><td>email</td><td>VARCHAR(255)</td><td>Email do usuário</td></tr>
+                    <tr><td>acao</td><td>VARCHAR(50)</td><td>Tipo de ação (login, block_client, etc.)</td></tr>
+                    <tr><td>detalhes</td><td>TEXT</td><td>Detalhes do evento</td></tr>
+                    <tr><td>ip_address</td><td>VARCHAR(50)</td><td>IP de origem</td></tr>
+                    <tr><td>device_id</td><td>VARCHAR(255)</td><td>Dispositivo</td></tr>
+                    <tr><td>criado_em</td><td>TIMESTAMP</td><td>Data/hora do log</td></tr>
+                </table>
+            </div>
+
+            <h3>Tabela: <code>help_info</code></h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Coluna</th><th>Tipo</th><th>Descrição</th></tr>
+                    <tr><td>id</td><td>SERIAL PK</td><td>ID único</td></tr>
+                    <tr><td>titulo</td><td>VARCHAR(200)</td><td>Título do item de ajuda</td></tr>
+                    <tr><td>conteudo</td><td>TEXT</td><td>Conteúdo/texto</td></tr>
+                    <tr><td>ordem</td><td>INTEGER</td><td>Ordem de exibição</td></tr>
+                    <tr><td>ativo</td><td>BOOLEAN</td><td>Se está visível</td></tr>
+                    <tr><td>criado_em</td><td>TIMESTAMP</td><td>Data de criação</td></tr>
+                </table>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> Não crie uma tabela separada chamada "usuarios". Todo o sistema usa a tabela <code>clientes</code> para os usuários finais do programa .exe.
+            </div>
+        </div>
+
+        <!-- 3. Variáveis de Ambiente -->
+        <div class="section" id="variaveis">
+            <h2>3. Variáveis de Ambiente</h2>
+            <p>Configure estas variáveis no serviço Panel Admin no Railway (Settings → Variables):</p>
+
+            <pre><code>DATABASE_URL=${{Postgres.DATABASE_URL}}
+ADMIN_EMAIL=admin@secretstore.com
+ADMIN_PASSWORD=SuaSenhaForte@2025
+ADMIN_NOME=Administrador
+JWT_SECRET=seu-jwt-secret-64-caracteres-aqui
+EMERGENCY_KEY=sua-chave-secreta-de-emergencia
+PORT=8080</code></pre>
+
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Variável</th><th>Obrigatória</th><th>Descrição</th></tr>
+                    <tr><td><code>DATABASE_URL</code></td><td>Sim</td><td>String de conexão PostgreSQL (Railway fornece automaticamente)</td></tr>
+                    <tr><td><code>ADMIN_EMAIL</code></td><td>Sim</td><td>Email do admin padrão criado no boot</td></tr>
+                    <tr><td><code>ADMIN_PASSWORD</code></td><td>Sim</td><td>Senha do admin (mínimo 8 caracteres, com maiúscula e especial)</td></tr>
+                    <tr><td><code>ADMIN_NOME</code></td><td>Não</td><td>Nome exibido no painel (padrão: "Administrador")</td></tr>
+                    <tr><td><code>JWT_SECRET</code></td><td>Sim</td><td>Chave para assinar tokens JWT (gere em generate-secret.vercel.app/64)</td></tr>
+                    <tr><td><code>EMERGENCY_KEY</code></td><td>Sim</td><td>Chave para acessar rotas de emergência</td></tr>
+                    <tr><td><code>PORT</code></td><td>Não</td><td>Porta do servidor (Railway usa 8080 por padrão)</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. Deploy -->
+        <div class="section" id="deploy">
+            <h2>4. Deploy no Railway</h2>
+
+            <h3>Passo 1: Criar projeto no Railway</h3>
+            <p>Acesse <code>railway.app</code>, crie um novo projeto vazio.</p>
+
+            <h3>Passo 2: Adicionar PostgreSQL</h3>
+            <p>Dentro do projeto, clique em <strong>+ New</strong> → <strong>Database</strong> → <strong>PostgreSQL</strong>. Copie a <code>DATABASE_URL</code> gerada.</p>
+
+            <h3>Passo 3: Adicionar o serviço Panel Admin</h3>
+            <p>Clique em <strong>+ New</strong> → <strong>GitHub Repo</strong> → selecione o repositório <code>secretstore-panel-admin</code>.</p>
+
+            <h3>Passo 4: Configurar variáveis</h3>
+            <p>No serviço criado, vá em <strong>Variables</strong> e adicione todas as variáveis listadas na seção 3.</p>
+
+            <h3>Passo 5: Gerar domínio público</h3>
+            <p>Vá em <strong>Settings</strong> → <strong>Networking</strong> → <strong>Generate Domain</strong>. O domínio será algo como:</p>
+            <pre><code>https://secretstore-panel-admin-production.up.railway.app</code></pre>
+
+            <h3>Passo 6: Verificar deploy</h3>
+            <p>Após o deploy ficar verde, acesse a URL. Você verá a tela de login do painel.</p>
+
+            <div class="success">
+                <strong>✅ Logs esperados no deploy:</strong><br>
+                [DB] Conectando ao PostgreSQL...<br>
+                [DB] ✅ Tabelas e índices criados com sucesso<br>
+                [DB] ✅ Admin padrão criado: admin@secretstore.com<br>
+                [DB] ✅ Itens de ajuda padrão criados<br>
+                [DB] ✅ Banco inicializado com sucesso<br>
+                [Server] ✅ Admin Panel rodando na porta 8080
+            </div>
+        </div>
+
+        <!-- 5. Painel Admin -->
+        <div class="section" id="painel">
+            <h2>5. Painel Admin - Funcionalidades</h2>
+
+            <h3>Login</h3>
+            <p>Acesse com o email e senha configurados nas variáveis <code>ADMIN_EMAIL</code> e <code>ADMIN_PASSWORD</code>.</p>
+
+            <h3>Dashboard</h3>
+            <p>Visão geral com estatísticas: clientes ativos/inativos, logins hoje, resets pendentes, uso de módulos.</p>
+
+            <h3>Gerenciar Clientes</h3>
+            <p>Criar, editar, bloquear/desbloquear clientes. Cada cliente recebe:</p>
+            <p><strong>Campos:</strong> nome, email, senha, status, módulos permitidos.</p>
+
+            <h3>Ações disponíveis por cliente:</h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Ação</th><th>Descrição</th></tr>
+                    <tr><td>Editar</td><td>Alterar nome, email, módulos, senha</td></tr>
+                    <tr><td>Bloquear/Ativar</td><td>Alterna o status entre ativo e inativo</td></tr>
+                    <tr><td>Liberar Dispositivo</td><td>Remove o vínculo de device_id (permite login em outro PC)</td></tr>
+                    <tr><td>Alterar Senha</td><td>Define nova senha para o cliente</td></tr>
+                    <tr><td>Aprovar Reset</td><td>Gera senha temporária quando o cliente solicita reset</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6. Programa .exe -->
+        <div class="section" id="exe">
+            <h2>6. Programa (.exe) - Configuração</h2>
+
+            <h3>Configurar URL da API</h3>
+            <p>No arquivo <code>api-client.js</code> (raiz do projeto Electron), altere:</p>
+            <pre><code>const API_BASE_URL = 'https://secretstore-panel-admin-production.up.railway.app';</code></pre>
+
+            <div class="warning">
+                <strong>⚠️ Sem barra no final!</strong> A URL não deve terminar com <code>/</code>.
+            </div>
+
+            <h3>Build do .exe</h3>
+            <p>Opção 1: Execute <code>build.bat</code> (compila Python + Electron automaticamente).</p>
+            <p>Opção 2: Manual:</p>
+            <pre><code># Instalar dependências
+npm install
+
+# Compilar scripts Python
+pyinstaller --onefile --noconsole scripts/mapas.py
+pyinstaller --onefile --noconsole scripts/veiculos.py
+pyinstaller --onefile --noconsole scripts/roupas.py
+pyinstaller --onefile --noconsole scripts/peds.py
+pyinstaller --onefile --noconsole scripts/weapons.py
+
+# Build Electron
+npx electron-builder --win portable</code></pre>
+
+            <p>O executável será gerado em <code>dist/SecretStore-Organizer-X.X.X.exe</code> (~180 MB).</p>
+
+            <h3>Fluxo do Cliente</h3>
+            <p>1. Abre o .exe → tela de login.</p>
+            <p>2. Digita email e senha cadastrados pelo admin.</p>
+            <p>3. Se for primeiro login, o dispositivo é vinculado (device_id).</p>
+            <p>4. Vê apenas os módulos habilitados pelo admin (Mapas, Carros, Roupas, Peds, Weapons).</p>
+            <p>5. Se tentar logar em outro PC, será bloqueado (1 dispositivo por conta).</p>
+        </div>
+
+        <!-- 7. Módulos -->
+        <div class="section" id="modulos">
+            <h2>7. Módulos Disponíveis</h2>
+
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>Módulo</th><th>Valor no DB</th><th>Script Python</th><th>Descrição</th></tr>
+                    <tr><td>Mapas</td><td><code>mapas</code></td><td>mapas.py</td><td>Gerenciador de mapas</td></tr>
+                    <tr><td>Carros</td><td><code>veiculos</code></td><td>veiculos.py</td><td>Gerenciador de veículos</td></tr>
+                    <tr><td>Roupas</td><td><code>roupas</code></td><td>roupas.py</td><td>Gerenciador de roupas</td></tr>
+                    <tr><td>Peds</td><td><code>peds</code></td><td>peds.py</td><td>Gerenciador de pedestres</td></tr>
+                    <tr><td>Weapons</td><td><code>weapons</code></td><td>weapons.py</td><td>Gerenciador de armas</td></tr>
+                </table>
+            </div>
+
+            <p>Os módulos são armazenados como array PostgreSQL na coluna <code>modulos_permitidos</code> da tabela <code>clientes</code>.</p>
+            <p>Exemplo no banco: <code>{mapas,veiculos,roupas}</code></p>
+        </div>
+
+        <!-- 8. Rotas de Emergência -->
+        <div class="section" id="emergencia">
+            <h2>8. Rotas de Emergência</h2>
+            <p>Essas rotas permitem desbloquear contas e resetar senhas sem precisar acessar o painel. Requerem a <code>EMERGENCY_KEY</code> configurada nas variáveis.</p>
+
+            <h3>Verificar status de todos os usuários</h3>
+            <pre><code>GET /api/emergency/status?key=SUA_EMERGENCY_KEY</code></pre>
+            <p>Retorna lista de admins e clientes com id, nome, email, status.</p>
+
+            <h3>Desbloquear todos os usuários</h3>
+            <pre><code>GET /api/emergency/unlock?key=SUA_EMERGENCY_KEY</code></pre>
+            <p>Define <code>status = 'ativo'</code> para todos os admins e clientes.</p>
+
+            <h3>Resetar senha de qualquer usuário</h3>
+            <pre><code>GET /api/emergency/reset-password?key=SUA_EMERGENCY_KEY&email=EMAIL&newpass=NOVA_SENHA</code></pre>
+            <p>Atualiza a senha (admin ou cliente) e define status como ativo.</p>
+
+            <div class="warning">
+                <strong>⚠️ Segurança:</strong> Use uma EMERGENCY_KEY forte (mínimo 32 caracteres). Nunca compartilhe essa chave. Mude-a regularmente.
+            </div>
+
+            <h3>Exemplos práticos</h3>
+            <pre><code># Ver status
+https://secretstore-panel-admin-production.up.railway.app/api/emergency/status?key=minha-chave-123
+
+# Desbloquear tudo
+https://secretstore-panel-admin-production.up.railway.app/api/emergency/unlock?key=minha-chave-123
+
+# Resetar senha do admin
+https://secretstore-panel-admin-production.up.railway.app/api/emergency/reset-password?key=minha-chave-123&email=admin@secretstore.com&newpass=NovaSenha@2025</code></pre>
+        </div>
+
+        <!-- 9. Troubleshooting -->
+        <div class="section" id="troubleshooting">
+            <h2>9. Solução de Problemas</h2>
+
+            <h3>Erro 401 - Unauthorized (login admin)</h3>
+            <p><strong>Causa:</strong> Senha incorreta ou bloqueio no localStorage do navegador.</p>
+            <p><strong>Solução:</strong></p>
+            <pre><code>// No console do navegador (F12):
+localStorage.clear();
+location.reload();</code></pre>
+            <p>Se persistir, use a rota de emergência para resetar a senha.</p>
+
+            <h3>Erro 500 - Internal Server Error</h3>
+            <p><strong>Causa:</strong> Tabela ou coluna inexistente no banco.</p>
+            <p><strong>Solução:</strong> Verifique os logs do deploy no Railway. Rode o SQL de criação de tabelas novamente se necessário.</p>
+
+            <h3>Erro 502 - Bad Gateway</h3>
+            <p><strong>Causa:</strong> O servidor não iniciou corretamente (crash no boot).</p>
+            <p><strong>Solução:</strong> Verifique os logs. Geralmente é DATABASE_URL ausente ou JWT_SECRET não definido.</p>
+
+            <h3>"Sem conexão" no .exe</h3>
+            <p><strong>Causa:</strong> URL da API incorreta no <code>api-client.js</code>.</p>
+            <p><strong>Solução:</strong> Verifique se a URL está correta e sem barra final. Teste no navegador: <code>URL/api/health</code> deve retornar JSON.</p>
+
+            <h3>Cliente não consegue logar no .exe</h3>
+            <p><strong>Causa:</strong> Conta criada mas status inativo, ou device_id vinculado a outro PC.</p>
+            <p><strong>Solução:</strong> No painel, verifique o status do cliente e libere o dispositivo se necessário.</p>
+
+            <h3>CORS Error</h3>
+            <p><strong>Causa:</strong> O servidor não está permitindo requisições do domínio do frontend.</p>
+            <p><strong>Solução:</strong> O <code>server.js</code> já usa <code>cors()</code> sem restrição. Se aparecer, reinicie o serviço.</p>
+
+            <h3>CSP Error (Firebase scripts)</h3>
+            <p><strong>Causa:</strong> Referências antigas ao Firebase SDK no HTML.</p>
+            <p><strong>Solução:</strong> Remova todas as tags <code>&lt;script&gt;</code> que apontam para <code>gstatic.com/firebasejs/</code>.</p>
+
+            <h3>Tabela "usuarios" vs "clientes"</h3>
+            <p><strong>Causa:</strong> Código antigo referenciando tabela errada.</p>
+            <p><strong>Solução:</strong> O sistema usa APENAS a tabela <code>clientes</code>. A tabela <code>usuarios</code> não deve existir. Se existir, delete-a:</p>
+            <pre><code>DROP TABLE IF EXISTS usuarios CASCADE;</code></pre>
+        </div>
+
+        <!-- 10. Checklist -->
+        <div class="section" id="checklist">
+            <h2>10. Checklist de Deploy</h2>
+
+            <div class="table-wrapper">
+                <table>
+                    <tr><th>#</th><th>Item</th><th>Status</th></tr>
+                    <tr><td>1</td><td>Conta Railway criada</td><td>☐</td></tr>
+                    <tr><td>2</td><td>PostgreSQL adicionado ao projeto</td><td>☐</td></tr>
+                    <tr><td>3</td><td>Serviço Panel Admin criado (via GitHub)</td><td>☐</td></tr>
+                    <tr><td>4</td><td>Variáveis de ambiente configuradas</td><td>☐</td></tr>
+                    <tr><td>5</td><td>Domínio público gerado</td><td>☐</td></tr>
+                    <tr><td>6</td><td>Deploy verde (sem erros)</td><td>☐</td></tr>
+                    <tr><td>7</td><td>Login admin funciona</td><td>☐</td></tr>
+                    <tr><td>8</td><td>Dashboard carrega sem erro 500</td><td>☐</td></tr>
+                    <tr><td>9</td><td>Criar cliente teste</td><td>☐</td></tr>
+                    <tr><td>10</td><td>api-client.js com URL correta (sem /)</td><td>☐</td></tr>
+                    <tr><td>11</td><td>Build do .exe concluído</td><td>☐</td></tr>
+                    <tr><td>12</td><td>Login do cliente no .exe funciona</td><td>☐</td></tr>
+                    <tr><td>13</td><td>Módulos aparecem conforme configurado</td><td>☐</td></tr>
+                    <tr><td>14</td><td>Rota /api/emergency/status responde</td><td>☐</td></tr>
+                    <tr><td>15</td><td>Firebase removido do HTML</td><td>☐</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="section" style="text-align: center; border: none; background: transparent;">
+            <p style="color: #666; font-size: 0.85rem;">SecretStore Panel Admin — Manual v2.1</p>
+            <p style="color: #444; font-size: 0.8rem;">Última atualização: Agosto 2026</p>
+        </div>
+    </div>
+</body>
+</html>
